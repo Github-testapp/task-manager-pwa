@@ -9,7 +9,8 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  closestCenter, // closestCornersから変更
+  pointerWithin,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import Column from './Column';
@@ -93,6 +94,7 @@ export default function Board() {
     const activeId = active.id;
     const overId = over.id;
 
+    // ステータス列に直接ドロップした場合
     if (Object.values(TASK_STATUS).includes(overId)) {
       const task = tasks.find((t) => t.id === activeId);
       if (task && task.status !== overId) {
@@ -101,6 +103,7 @@ export default function Board() {
       return;
     }
 
+    // タスクカードの上にドロップした場合
     const activeTask = tasks.find((t) => t.id === activeId);
     const overTask = tasks.find((t) => t.id === overId);
 
@@ -109,6 +112,13 @@ export default function Board() {
     const activeStatus = activeTask.status;
     const overStatus = overTask.status;
 
+    // 異なるステータスへの移動
+    if (activeStatus !== overStatus) {
+      updateTask(activeId, { status: overStatus });
+      return;
+    }
+
+    // 同じステータス内での並び替え
     if (activeStatus === overStatus) {
       const statusTasks = getTasksByStatus(activeStatus);
       const oldIndex = statusTasks.findIndex((t) => t.id === activeId);
@@ -121,8 +131,6 @@ export default function Board() {
         useTaskStore.setState({ tasks: newTasks });
         useTaskStore.getState().saveTasks();
       }
-    } else {
-      updateTask(activeId, { status: overStatus });
     }
   };
 
@@ -190,7 +198,7 @@ export default function Board() {
       {/* カンバンボード（縦3段） */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
@@ -222,7 +230,7 @@ export default function Board() {
 
         <DragOverlay>
           {activeTask ? (
-            <div className="rotate-3 opacity-90 w-64">
+            <div className="rotate-3 opacity-90 w-32 sm:w-40">
               <TaskCard
                 task={activeTask}
                 onEdit={() => {}}
